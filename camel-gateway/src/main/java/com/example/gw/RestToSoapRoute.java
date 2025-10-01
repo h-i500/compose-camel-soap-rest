@@ -5,8 +5,10 @@ import org.apache.camel.model.dataformat.JsonLibrary;
 import org.springframework.stereotype.Component;
 import org.apache.camel.component.cxf.common.message.CxfConstants;
 
-// WSDL 生成クラス（上の -p で固定したパッケージ）
-import com.example.order.contract.PlaceOrderRequest;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 @Component
 public class RestToSoapRoute extends RouteBuilder {
@@ -25,26 +27,35 @@ public class RestToSoapRoute extends RouteBuilder {
 
       .process(e -> {
         OrderRequest r = e.getMessage().getBody(OrderRequest.class);
-        PlaceOrderRequest req = new PlaceOrderRequest();
-        // ↓ 生成クラスの setter 名は WSDL/types に依存。ビルド後に実クラス名を確認して合わせてください。
+
+        // ★ import に依存しないよう、完全修飾名でインスタンス化
+        com.example.order.contract.PlaceOrderRequest req =
+            new com.example.order.contract.PlaceOrderRequest();
         req.setOrderId(r.orderId());
         req.setAmount(r.amount());
 
-        // CXF POJO: 引数は Object[] で渡す
+        // CXF dataFormat=POJO は、引数を Object[] で渡す
         e.getMessage().setBody(new Object[]{ req });
+
+        // ★ SOAPAction を空で送る（Camel 4 正攻法）
+        //   CxfConstants.CAMEL_CXF_PROTOCOL_HEADERS が解決できない環境のため、
+        //   文字列リテラル "CamelCxfProtocolHeaders" を直接使います。
+        Map<String, List<String>> ph = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        ph.put("SOAPAction", Collections.singletonList(""));
+        e.getMessage().setHeader("CamelCxfProtocolHeaders", ph);
       })
 
-      // 操作名とNSを明示（安定）
+      // 操作名と Namespace を明示（安定）
       .setHeader(CxfConstants.OPERATION_NAME, constant("PlaceOrder"))
       .setHeader(CxfConstants.OPERATION_NAMESPACE, constant("http://example.com/order"))
 
-      // POJO 送信
+      // CXF JAX-WS クライアント（serviceClass 必須）。WSDL も明示。
       .to("cxf:{{gateway.soapBackendUrl}}"
-          + "?dataFormat=POJO")
-          // SEI を使うなら serviceClass も付けられます（WSDL から SEI が生成されている場合）
-          // + "&serviceClass=com.example.order.contract.OrderService"
+          + "?dataFormat=POJO"
+          + "&serviceClass=com.example.order.contract.OrderService"
+          + "&wsdlURL=classpath:order.wsdl")
 
-      // 今回はデモなので固定レスポンス
+      // デモ用の固定レスポンス
       .setHeader("Content-Type", constant("application/json"))
       .setBody(simple("{\"status\":\"OK\"}"));
   }

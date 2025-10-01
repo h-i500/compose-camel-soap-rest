@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://schemas.xmlsoap.org/wsdl/"
+             xmlns:xs="http://www.w3.org/2001/XMLSchema"
+             xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+             xmlns:tns="http://example.com/order"
+             targetNamespace="http://example.com/order"
+             name="OrderService">
+
+  <types>
+    <xs:schema targetNamespace="http://example.com/order"
+               elementFormDefault="qualified">
+
+      <xs:element name="PlaceOrderRequest">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="orderId" type="xs:string"/>
+            <xs:element name="amount" type="xs:string"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="PlaceOrderResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="status" type="xs:string"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+    </xs:schema>
+  </types>
+
+  <message name="PlaceOrderRequest">
+    <part name="parameters" element="tns:PlaceOrderRequest"/>
+  </message>
+  <message name="PlaceOrderResponse">
+    <part name="parameters" element="tns:PlaceOrderResponse"/>
+  </message>
+
+  <portType name="OrderService">
+    <operation name="PlaceOrder">
+      <input message="tns:PlaceOrderRequest"/>
+      <output message="tns:PlaceOrderResponse"/>
+    </operation>
+  </portType>
+
+  <binding name="OrderServiceSoapBinding" type="tns:OrderService">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="PlaceOrder">
+      <!-- <soap:operation soapAction="http://example.com/order/PlaceOrder"/> -->
+      <soap:operation soapAction=""/>
+      <input><soap:body use="literal"/></input>
+      <output><soap:body use="literal"/></output>
+    </operation>
+  </binding>
+
+  <service name="OrderService">
+    <port name="OrderServicePort" binding="tns:OrderServiceSoapBinding">
+      <soap:address location="http://localhost:8080/services/OrderService"/>
+    </port>
+  </service>
+
+</definitions>
