@@ -9,12 +9,6 @@ import jakarta.xml.ws.Endpoint;
 
 @Configuration
 public class CxfConfig {
-  // @Bean
-  // public Endpoint orderEndpoint(Bus bus, OrderServiceEndpointImpl impl) {
-  //   EndpointImpl ep = new EndpointImpl(bus, impl);
-  //   ep.publish("/services/OrderService");
-  //   return ep;
-  // }
 
   @Bean
   public Endpoint orderEndpoint(Bus bus, OrderServiceEndpointImpl impl) {
