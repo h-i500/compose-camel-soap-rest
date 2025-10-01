@@ -1,0 +1,134 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.example</groupId>
+  <artifactId>web-soap-sb</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.3.3</version>
+  </parent>
+
+  <properties>
+    <java.version>21</java.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <cxf.version>4.0.5</cxf.version>
+  </properties>
+
+  <dependencies>
+    <!-- REST API -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <!-- CXF JAX-WS client runtime -->
+    <dependency>
+      <groupId>org.apache.cxf</groupId>
+      <artifactId>cxf-rt-frontend-jaxws</artifactId>
+      <version>${cxf.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.cxf</groupId>
+      <artifactId>cxf-rt-transports-http</artifactId>
+      <version>${cxf.version}</version>
+    </dependency>
+
+    <!-- JAXB runtime (JDK 21用) -->
+    <dependency>
+      <groupId>org.glassfish.jaxb</groupId>
+      <artifactId>jaxb-runtime</artifactId>
+      <version>4.0.5</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <!-- 生成コードをソースルートへ追加 -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>3.6.0</version>
+        <executions>
+          <execution>
+            <id>add-source</id>
+            <phase>generate-sources</phase>
+            <goals><goal>add-source</goal></goals>
+            <configuration>
+              <sources>
+                <source>${project.build.directory}/generated-sources/cxf</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- WSDL -> Java -->
+      <plugin>
+        <groupId>org.apache.cxf</groupId>
+        <artifactId>cxf-codegen-plugin</artifactId>
+        <version>${cxf.version}</version>
+
+        <!-- 生成ツールを明示（環境差異の吸収） -->
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.cxf</groupId>
+            <artifactId>cxf-tools-wsdlto-frontend-jaxws</artifactId>
+            <version>${cxf.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.cxf</groupId>
+            <artifactId>cxf-tools-wsdlto-databinding-jaxb</artifactId>
+            <version>${cxf.version}</version>
+          </dependency>
+        </dependencies>
+
+        <executions>
+          <execution>
+            <id>generate-sources</id>
+            <phase>generate-sources</phase>
+            <goals><goal>wsdl2java</goal></goals>
+            <configuration>
+              <wsdlOptions>
+                <wsdlOption>
+                  <!-- ★ローカル保存したWSDLを参照 -->
+                  <wsdl>${project.basedir}/src/main/resources/wsdl/OrderService.wsdl</wsdl>
+                  <extraargs>
+                    <!-- ★WSDLの targetNamespace に合わせて ns→package を設定 -->
+                    <extraarg>-p</extraarg>
+                    <extraarg>http://example.com/order=com.example.order</extraarg>
+
+                    <!-- （任意）外部 import をローカルへ置換：catalog を使う -->
+                    <extraarg>-catalog</extraarg>
+                    <extraarg>${project.basedir}/src/main/resources/wsdl/catalog.xml</extraarg>
+
+                    <extraarg>-autoNameResolution</extraarg>
+                    <extraarg>-validate</extraarg>
+                    <extraarg>-verbose</extraarg>
+                  </extraargs>
+                </wsdlOption>
+              </wsdlOptions>
+
+              <!-- 生成先 -->
+              <sourceRoot>${project.build.directory}/generated-sources/cxf</sourceRoot>
+
+              <!-- Windowsで安定化 -->
+              <fork>true</fork>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

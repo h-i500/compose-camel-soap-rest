@@ -1,0 +1,11 @@
+server:
+  port: 8091
+
+soap:
+  endpoint: http://backend-soap:8080/services/OrderService
+  connect-timeout: 3000
+  read-timeout: 5000
+
+logging:
+  level:
+    org.apache.cxf: INFO
