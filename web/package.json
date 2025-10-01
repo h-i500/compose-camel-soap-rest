@@ -1,0 +1,11 @@
+{
+  "name": "rest-client",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": { "start": "react-scripts start", "build": "react-scripts build" },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-scripts": "5.0.1"
+  }
+}

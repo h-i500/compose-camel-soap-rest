@@ -1,0 +1,10 @@
+server:
+  port: 8081
+
+gateway:
+  # docker-compose の environment: SOAP_BACKEND_URL=... を使う
+  soapBackendUrl: ${SOAP_BACKEND_URL:http://backend-soap:8080/services/OrderService}
+
+management:
+  endpoints.web.exposure.include: health,info
+  endpoint.health.probes.enabled: true

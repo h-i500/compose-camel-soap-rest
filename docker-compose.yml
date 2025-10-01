@@ -1,0 +1,125 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: appdb
+      TZ: Asia/Tokyo
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    networks: [backend]
+
+  # broker:
+  #   image: quay.io/artemiscloud/activemq-artemis-broker:latest
+  #   environment:
+  #     # ← この2つが必須（artemiscloud で一般的）
+  #     - AMQ_USER=admin
+  #     - AMQ_PASSWORD=admin
+  #     # 互換のため併記してもOK（どちらかで拾われます）
+  #     - ARTEMIS_USER=admin
+  #     - ARTEMIS_PASSWORD=admin
+  #     - TZ=Asia/Tokyo
+  #   ports:
+  #     - "61616:61616"   # broker
+  #     - "8161:8161"     # 管理コンソール（開発用）
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "nc -z localhost 61616"]
+  #     interval: 5s
+  #     retries: 40
+  #   networks: [backend]
+
+  # broker:
+  #   image: vromero/activemq-artemis:2.38.0
+  #   environment:
+  #     ARTEMIS_USERNAME: admin
+  #     ARTEMIS_PASSWORD: admin
+  #     TZ: Asia/Tokyo
+  #   ports:
+  #     - "61616:61616"
+  #     - "8161:8161"
+  #   networks: [backend]
+
+  broker:
+    # image: vromero/activemq-artemis:latest
+    image: vromero/activemq-artemis:2.16.0
+    environment:
+      ARTEMIS_USERNAME: admin
+      ARTEMIS_PASSWORD: admin
+      TZ: Asia/Tokyo
+    ports:
+      - "61616:61616"
+      - "8161:8161"
+    networks: [backend]
+
+  backend-soap:
+    build: ./backend-soap
+    environment:
+      - SPRING_PROFILES_ACTIVE=local
+      - TZ=Asia/Tokyo
+    ports:
+      - "8080:8080"
+    # depends_on:
+    #   db: { condition: service_healthy }
+    #   broker: { condition: service_healthy }
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health/readiness"]
+    #   interval: 5s
+    #   retries: 40
+    volumes:
+      - jtaobjstore:/opt/app/objectstore  # Narayana ObjectStore 永続化
+    networks: [backend]
+
+  camel-gateway:
+    build: ./camel-gateway
+    environment:
+      - SPRING_PROFILES_ACTIVE=local
+      - TZ=Asia/Tokyo
+      - SOAP_BACKEND_URL=http://backend-soap:8080/services/OrderService
+    # depends_on:
+    #   backend-soap: { condition: service_healthy }
+    ports:
+      - "8081:8081"   # REST API (dev 用に公開)
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health/readiness"]
+    #   interval: 5s
+    #   retries: 40
+    networks: [backend, frontend]
+
+  web:
+    build: ./web
+    environment:
+      - TZ=Asia/Tokyo
+    ports:
+      - "8088:80"
+    # ここが重要：gatewayのいる backend にもつなぐ
+    networks: [frontend, backend]
+
+
+  # 任意：フロントの TLS/CORS/ルーティングを本番に寄せる場合
+  # edge:
+  #   image: traefik:v3
+  #   command: ["--api.insecure=true","--providers.file.filename=/etc/traefik/dynamic.yml","--entrypoints.web.address=:80"]
+  #   ports: ["8080:80", "8089:8080"]
+  #   volumes:
+  #     - ./edge/traefik.yml:/etc/traefik/traefik.yml:ro
+  #     - ./edge/dynamic.yml:/etc/traefik/dynamic.yml:ro
+  #   depends_on:
+  #     web: { condition: service_started }
+  #     camel-gateway: { condition: service_started }
+  #   networks: [frontend, backend]
+
+volumes:
+  dbdata:
+  jtaobjstore:
+
+networks:
+  frontend:
+  backend:

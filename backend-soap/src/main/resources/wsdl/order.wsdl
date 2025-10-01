@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://schemas.xmlsoap.org/wsdl/"
+             xmlns:tns="http://example.com/order"
+             xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+             xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+             targetNamespace="http://example.com/order">
+  <types>
+    <xsd:schema targetNamespace="http://example.com/order">
+      <xsd:element name="PlaceOrderRequest">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="orderId" type="xsd:string"/>
+            <xsd:element name="amount" type="xsd:decimal"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="PlaceOrderResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="status" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+    </xsd:schema>
+  </types>
+
+  <message name="PlaceOrderRequest"><part name="payload" element="tns:PlaceOrderRequest"/></message>
+  <message name="PlaceOrderResponse"><part name="payload" element="tns:PlaceOrderResponse"/></message>
+
+  <portType name="OrderServicePortType">
+    <operation name="PlaceOrder">
+      <input message="tns:PlaceOrderRequest"/>
+      <output message="tns:PlaceOrderResponse"/>
+    </operation>
+  </portType>
+
+  <binding name="OrderServiceSoapBinding" type="tns:OrderServicePortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="PlaceOrder">
+      <soap:operation soapAction="PlaceOrder"/>
+      <input><soap:body use="literal"/></input>
+      <output><soap:body use="literal"/></output>
+    </operation>
+  </binding>
+
+  <service name="OrderService">
+    <port name="OrderServicePort" binding="tns:OrderServiceSoapBinding">
+      <soap:address location="http://localhost:8080/services/OrderService"/>
+    </port>
+  </service>
+</definitions>
