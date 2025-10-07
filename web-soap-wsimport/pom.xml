@@ -1,0 +1,193 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <!-- Spring Boot 親 -->
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.3.3</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>com.example</groupId>
+  <artifactId>web-soap-wsimport</artifactId>
+  <version>0.0.1</version>
+  <name>web-soap-wsimport</name>
+
+  <properties>
+    <java.version>17</java.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+    <!-- WSDL を同梱してビルドする想定（推奨） -->
+    <wsdl.path>${project.basedir}/src/main/wsdl/OrderService.wsdl</wsdl.path>
+    <generated.src.dir>${project.build.directory}/generated-sources/wsimport</generated.src.dir>
+    <client.package>com.example.wsimport.client</client.package>
+  </properties>
+
+  <dependencies>
+    <!-- Web + Thymeleaf -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-thymeleaf</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
+
+    <!-- JAX-WS ランタイム（Metro 4; Jakartaベース） -->
+    <dependency>
+      <groupId>com.sun.xml.ws</groupId>
+      <artifactId>jaxws-rt</artifactId>
+      <version>4.0.2</version>
+    </dependency>
+
+    <!-- 任意: Actuator -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <!-- wsimport：WSDL→Javaコード生成（Metro4の tools を明示） -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>jaxws-maven-plugin</artifactId>
+        <version>2.6</version>
+        <dependencies>
+          <!-- 重要：Jakarta時代の wsimport を使うため tools を明示 -->
+          <dependency>
+            <groupId>com.sun.xml.ws</groupId>
+            <artifactId>jaxws-tools</artifactId>
+            <version>4.0.2</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <goals>
+              <goal>wsimport</goal>
+            </goals>
+            <configuration>
+              <wsdlFiles>
+                <wsdlFile>${wsdl.path}</wsdlFile>
+              </wsdlFiles>
+              <packageName>${client.package}</packageName>
+              <encoding>UTF-8</encoding>
+              <keep>true</keep>
+              <verbose>false</verbose>
+              <xnocompile>true</xnocompile>
+              <sourceDestDir>${generated.src.dir}</sourceDestDir>
+              <!-- 生成クラスが参照する WSDL の場所を固定（クラスパス上にコピーする） -->
+              <wsdlLocation>classpath:/wsdl/OrderService.wsdl</wsdlLocation>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- 生成ソースを compile source root に追加（確実にコンパイルさせる） -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>3.5.0</version>
+        <executions>
+          <execution>
+            <id>add-wsimport-sources</id>
+            <phase>generate-sources</phase>
+            <goals><goal>add-source</goal></goals>
+            <configuration>
+              <sources>
+                <source>${generated.src.dir}</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- WSDL を jar の classpath（/wsdl）へコピー -->
+      <plugin>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>3.3.1</version>
+        <executions>
+          <execution>
+            <id>copy-wsdl</id>
+            <phase>process-resources</phase>
+            <goals><goal>resources</goal></goals>
+            <configuration>
+              <resources>
+                <resource>
+                  <directory>${project.basedir}/src/main/wsdl</directory>
+                  <includes>
+                    <include>OrderService.wsdl</include>
+                  </includes>
+                  <targetPath>wsdl</targetPath>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+        <configuration>
+          <release>17</release>
+          <encoding>${project.build.sourceEncoding}</encoding>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+
+  <!-- 開発用：起動中の backend-soap から直接 WSDL を取得して生成したいとき -->
+  <profiles>
+    <profile>
+      <id>wsdl-remote</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>jaxws-maven-plugin</artifactId>
+            <version>2.6</version>
+            <dependencies>
+              <dependency>
+                <groupId>com.sun.xml.ws</groupId>
+                <artifactId>jaxws-tools</artifactId>
+                <version>4.0.2</version>
+              </dependency>
+            </dependencies>
+            <executions>
+              <execution>
+                <goals><goal>wsimport</goal></goals>
+                <configuration>
+                  <wsdlUrls>
+                    <!-- ホストから見たURL（Docker外）。事前に backend-soap を起動しておく -->
+                    <wsdlUrl>http://localhost:8080/services/OrderService?wsdl</wsdlUrl>
+                  </wsdlUrls>
+                  <packageName>${client.package}</packageName>
+                  <encoding>UTF-8</encoding>
+                  <keep>true</keep>
+                  <xnocompile>true</xnocompile>
+                  <sourceDestDir>${generated.src.dir}</sourceDestDir>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>

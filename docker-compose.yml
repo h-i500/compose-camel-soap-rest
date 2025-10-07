@@ -115,6 +115,18 @@ services:
     depends_on:
       - backend-soap
     networks: [backend]
+  
+  web-soap-wsimport:
+    build: ./web-soap-wsimport
+    image: web-soap-wsimport:local
+    environment:
+      - SERVER_PORT=8090
+      - SOAP_BACKEND_URL=http://backend-soap:8080/services/OrderService
+    ports:
+      - "8090:8090"
+    depends_on:
+      - backend-soap
+    networks: [backend]
 
 
   # 任意：フロントの TLS/CORS/ルーティングを本番に寄せる場合

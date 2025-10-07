@@ -1,0 +1,57 @@
+<?xml version='1.0' encoding='UTF-8'?><wsdl:definitions xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:tns="http://example.com/order" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:ns1="http://schemas.xmlsoap.org/soap/http" name="OrderService" targetNamespace="http://example.com/order">
+  <wsdl:types>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:tns="http://example.com/order" elementFormDefault="qualified" targetNamespace="http://example.com/order" version="1.0">
+
+  <xs:element name="PlaceOrderRequest" type="tns:PlaceOrderRequest"/>
+
+  <xs:element name="PlaceOrderResponse" type="tns:PlaceOrderResponse"/>
+
+  <xs:complexType name="PlaceOrderRequest">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="orderId" type="xs:string"/>
+      <xs:element minOccurs="0" name="amount" type="xs:decimal"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PlaceOrderResponse">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="status" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>
+  </wsdl:types>
+  <wsdl:message name="PlaceOrder">
+    <wsdl:part element="tns:PlaceOrderRequest" name="PlaceOrderRequest">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:message name="PlaceOrderResponse">
+    <wsdl:part element="tns:PlaceOrderResponse" name="PlaceOrderResponse">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:portType name="OrderService">
+    <wsdl:operation name="PlaceOrder">
+      <wsdl:input message="tns:PlaceOrder" name="PlaceOrder">
+    </wsdl:input>
+      <wsdl:output message="tns:PlaceOrderResponse" name="PlaceOrderResponse">
+    </wsdl:output>
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:binding name="OrderServiceSoapBinding" type="tns:OrderService">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <wsdl:operation name="PlaceOrder">
+      <soap:operation soapAction="" style="document"/>
+      <wsdl:input name="PlaceOrder">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="PlaceOrderResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:service name="OrderService">
+    <wsdl:port binding="tns:OrderServiceSoapBinding" name="OrderServicePort">
+      <soap:address location="http://localhost:8080/services/OrderService"/>
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>

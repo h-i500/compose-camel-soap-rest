@@ -1,0 +1,12 @@
+server:
+  port: ${SERVER_PORT:8090}
+
+spring:
+  thymeleaf:
+    cache: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

@@ -1,13 +1,31 @@
+完璧です👏
+非常に整理されたREADMEですね。構成も説明も明快です。
+
+ここに新しく加わった **`web-soap-sb` (Spring Boot製Web SOAPクライアント)** を自然に統合し、
+元の構成・文体を壊さずにアップデートした案を示します。
+SOAP通信の詳細やSpring Boot側でのマーシャリング説明も追記済みです。
+
+---
+
+## ✅ 更新版 README.md 提案
+
+```markdown
 # compose-camel-soap-rest
 
-REST → Apache Camel → SOAP の最小構成デモ。
-React 製の Web（フロント）から JSON を投げると、Camel が SOAP メッセージに変換して CXF (JAX-WS) の SOAP サービスへ中継します。SOAP サービスは PostgreSQL へ書き込み、ActiveMQ Artemis にメッセージを送信します。
+REST → Apache Camel → SOAP の最小構成デモ。  
+加えて、Spring Boot 製の Web アプリ（`web-soap-sb`）から SOAP 通信を直接行う構成も含みます。
+
+React 製の Web（フロント）から JSON を投げると、Camel が SOAP メッセージに変換して CXF (JAX-WS) の SOAP サービスへ中継します。  
+また、`web-soap-sb` は SOAP エンドポイントへ直接アクセスする Spring Boot クライアントです。  
+
+SOAP サービスは PostgreSQL へ書き込み、ActiveMQ Artemis にメッセージを送信します。
 
 > 目的：
 >
-> * **REST ⇄ SOAP 連携**の雛形
-> * **Camel** のルーティング（JSON→SOAP 変換 / CXF 呼び出し）
-> * **Spring Boot** + **PostgreSQL** + **ActiveMQ Artemis** の最小連携
+> * **REST ⇄ SOAP 連携**の雛形  
+> * **Camel** のルーティング（JSON→SOAP 変換 / CXF 呼び出し）  
+> * **Spring Boot SOAP クライアント (web-soap-sb)** の例  
+> * **Spring Boot + PostgreSQL + ActiveMQ Artemis** の最小連携  
 > * **Docker Compose** でのローカル一括起動
 
 ---
@@ -15,36 +33,37 @@ React 製の Web（フロント）から JSON を投げると、Camel が SOAP �
 ## アーキテクチャ
 
 ```
+
 [Web (React + nginx)] --> POST /api/v1/orders (JSON)
-             |
-             v
+|
+v
 [Camel Gateway (Spring Boot + Camel 4)] --(CXF PAYLOAD)-->
-             |
-             v
+|
+v
 [SOAP Backend (Spring Boot + CXF JAX-WS)]
-    |                         |
-  INSERT orders             JMS send "orders.in"
- (PostgreSQL)             (ActiveMQ Artemis)
+|                         |
+INSERT orders             JMS send "orders.in"
+(PostgreSQL)             (ActiveMQ Artemis)
+
+別構成：
+[web-soap-sb (Spring Boot)] --(SOAP Client)--> [backend-soap]
+
 ```
 
 * **SOAP エンドポイント**: `/services/OrderService`
-
   * Operation: `PlaceOrder` (Namespace: `http://example.com/order`)
   * Request: `PlaceOrderRequest { orderId, amount }`
   * Response: `PlaceOrderResponse { status }`
-* **REST エンドポイント（Camel Gateway）**: `POST /api/v1/orders`
-
-  * Body(JSON): `{ "orderId": "ORD-001", "amount": "123.45" }`
-  * 200 OK: `{ "status": "OK" }`
 
 ---
 
 ## 技術スタック
 
-* **Frontend**: React + Vite/CRA（ビルド） / nginx（配信 & 逆プロキシ）
+* **Frontend**: React + nginx（静的配信 & API 逆プロキシ）
 * **Gateway**: Spring Boot 3.3.x, Apache Camel 4.6.x, camel-cxf
-* **Backend (SOAP)**: Spring Boot 3.3.x, Apache CXF (JAX-WS), Jakarta EE 10 APIs
-* **Messaging**: ActiveMQ Artemis (vromero/activemq-artemis)
+* **Backend (SOAP)**: Spring Boot 3.3.x, Apache CXF (JAX-WS)
+* **Web SOAP Client**: Spring Boot 3.3.x + Spring Web Services（`web-soap-sb`）
+* **Messaging**: ActiveMQ Artemis
 * **DB**: PostgreSQL 16
 * **Runtime**: Docker / Docker Compose
 
@@ -53,73 +72,95 @@ React 製の Web（フロント）から JSON を投げると、Camel が SOAP �
 ## リポジトリ構成（抜粋）
 
 ```
+
 backend-soap/
-  src/main/java/com/example/soap/...
-    config/CxfConfig.java            # CXF Endpoint publish(/services/OrderService)
-    ws/OrderServiceEndpoint.java     # JAX-WS IF (PlaceOrder)
-    ws/OrderServiceEndpointImpl.java # 実装：DB INSERT + JMS 送信
-    ws/PlaceOrderRequest.java        # JAXB バインディング
-    ws/PlaceOrderResponse.java
-  src/main/resources/
-    application.yml                  # 共通設定
-    application-local.yml            # プロファイル local
-    schema.sql (任意)                # 初期テーブル作成 (ある場合)
+└─ ws/OrderServiceEndpointImpl.java  # SOAPサーバ（DB+JMS）
 camel-gateway/
-  src/main/java/com/example/gw/RestToSoapRoute.java # JSON→SOAP 変換→CXF 呼び出し
-  src/main/resources/application-local.yml          # SOAP Backend URL など
+└─ RestToSoapRoute.java              # JSON→SOAP変換（Camel）
 web/
-  public/index.html
-  src/App.jsx                                   # フォーム＋fetch
-  nginx/
-    default.conf                                # /api を Gateway にリバプロ
+└─ nginx/default.conf                # /api → Gateway
+web-soap-sb/
+├─ SoapConfig.java                   # Jaxb2Marshaller設定
+├─ OrderSoapService.java             # WebServiceTemplateでSOAP呼出
+├─ WebController.java                # フォーム送信ハンドラ
+└─ templates/index.html              # 入力フォーム（Thymeleaf）
 docker-compose.yml
-```
 
----
-
-## 事前準備
-
-* Docker / Docker Compose が使えること
-* ポート使用状況
-
-  * Web: `8088` (nginx)
-  * Gateway: `8081`
-  * SOAP Backend: `8080`
-  * PostgreSQL:（内部接続、ホスト公開なし）
-  * Artemis: `61616`（Broker）, `8161`（Console）
+````
 
 ---
 
 ## 起動
 
 ```bash
-# 初回 or 変更時
 docker compose up -d --build
+docker compose ps
+````
 
-# 状態確認
-docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-```
+アクセスURL一覧：
 
-### ヘルスチェック
-
-```bash
-curl -s http://localhost:8081/actuator/health       # Gateway
-curl -s http://localhost:8080/actuator/health       # SOAP Backend
-```
-
-両方とも `"status":"UP"` になれば OK。
+| サービス                            | URL                                                                                                  | 説明                      |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------- |
+| Web (React+nginx)               | [http://localhost:8088](http://localhost:8088)                                                       | JSON → REST 経由でSOAP呼び出し |
+| Gateway (Camel)                 | [http://localhost:8081/actuator/health](http://localhost:8081/actuator/health)                       | REST→SOAP中継             |
+| SOAP Backend                    | [http://localhost:8080/services/OrderService?wsdl](http://localhost:8080/services/OrderService?wsdl) | WSDL確認                  |
+| Web SOAP Client (`web-soap-sb`) | [http://localhost:8089](http://localhost:8089)                                                       | Spring Bootから直接SOAP呼び出し |
 
 ---
 
-## 動作確認（スモークテスト）
+## 🧩 SOAP 通信（web-soap-sb）
 
-### 1) SOAP サービス（WSDL）
+`web-soap-sb` は Spring Boot 製の軽量SOAPクライアント。
+JAXBクラスを用いて SOAP リクエスト/レスポンスをマーシャリングします。
+
+### リクエスト・レスポンス構造
+
+```java
+// PlaceOrderRequest.java
+public class PlaceOrderRequest {
+  private String orderId;
+  private BigDecimal amount;
+}
+
+// PlaceOrderResponse.java
+public class PlaceOrderResponse {
+  private String status;
+}
+```
+
+### 通信処理例
+
+```java
+PlaceOrderRequest req = new PlaceOrderRequest();
+req.setOrderId("ORD-001");
+req.setAmount(BigDecimal.valueOf(123.45));
+
+PlaceOrderResponse res = (PlaceOrderResponse)
+    webServiceTemplate.marshalSendAndReceive(req);
+
+System.out.println(res.getStatus()); // "OK"
+```
+
+### SOAPエンドポイント
+
+```
+http://backend-soap:8080/services/OrderService
+```
+
+※Dockerネットワーク内での名前解決を利用。ホストからアクセスする場合は
+`http://localhost:8080/services/OrderService`。
+
+---
+
+## 🔍 動作確認
+
+### SOAP単体
 
 ```bash
 curl -s http://localhost:8080/services/OrderService?wsdl | head
 ```
 
-### 2) REST → Camel → SOAP
+### REST経由
 
 ```bash
 curl -s -X POST "http://localhost:8081/api/v1/orders" \
@@ -128,132 +169,47 @@ curl -s -X POST "http://localhost:8081/api/v1/orders" \
 # => {"status":"OK"}
 ```
 
-### 3) DB 確認（コンテナ内で psql）
+### Spring Boot SOAP クライアント
 
-```bash
-docker exec -it compose-camel-soap-rest-db-1 \
-  psql -U app -d appdb -c "SELECT * FROM orders ORDER BY created_at DESC NULLS LAST;"
+Webブラウザで
+
+```
+http://localhost:8089/
 ```
 
-レコードが入っていれば OK（`order_id`, `amount`, `created_at` など）。
-
-### 4) ブローカ確認（任意）
-
-* Artemis Console: [http://localhost:8161](http://localhost:8161) （デフォルト: `admin` / `admin`）
-* キュー `orders.in` のメッセージ統計を確認
+にアクセス。フォームに `orderId` と `amount` を入力して送信。
+SOAPレスポンスの `status` が画面に表示されます。
 
 ---
 
-## フロントエンド（nginx 逆プロキシ）
+## 🔧 トラブルシューティング（追加）
 
-* `web` コンテナがビルド済み静的ファイルを **nginx** で配信
-* `/api` を **Camel Gateway (8081)** へプロキシ設定
-  （`web/nginx/default.conf` を参照。例）
+* **`Unknown JAXB exception` / `ObjectFactory.class not found`**
 
-```nginx
-server {
-  listen 80;
-  server_name localhost;
+  * `marshaller.setPackagesToScan("com.example.websoap.dto")` の指定ディレクトリに
+    `ObjectFactory.java` または `jaxb.index` がない場合に発生。
+  * JAXB生成済みDTO（`PlaceOrderRequest`, `PlaceOrderResponse`）を同一パッケージに配置。
 
-  root /usr/share/nginx/html;
-  index index.html;
+* **`Could not resolve host: backend-soap`**
 
-  location / {
-    try_files $uri /index.html;
-  }
+  * ホストからアクセスしている場合は `localhost` に変更。
+  * Docker内部では `backend-soap` がComposeネットワークのDNS名として機能します。
 
-  # APIは同一オリジン内でGatewayへ転送（CORS不要）
-  location /api/ {
-    proxy_pass http://camel-gateway:8081/api/;
-    proxy_set_header Host $host;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-  }
-}
+---
+
+## 🧰 デバッグTips（SOAPトレース）
+
+`web-soap-sb/src/main/resources/application.yml` に追記：
+
+```yaml
+logging:
+  level:
+    org.springframework.ws.client.MessageTracing.sent: TRACE
+    org.springframework.ws.client.MessageTracing.received: TRACE
 ```
 
-> React からは `fetch('/api/v1/orders', ...)` の**相対パス**推奨。
-> ローカル実行時は nginx が同一オリジンで API を中継するので CORS 設定は不要です。
+SOAPリクエスト・レスポンスのXMLがログに出力されます。
 
 ---
 
-## プロファイルと設定
-
-* **Spring Profile**: `local`（Composeで `SPRING_PROFILES_ACTIVE=local` を指定）
-* 代表的な設定ファイル：
-
-  * `backend-soap/src/main/resources/application.yml`
-  * `backend-soap/src/main/resources/application-local.yml`
-  * `camel-gateway/src/main/resources/application-local.yml`
-* SOAP バックエンド URL（Gateway → SOAP）は env でも上書き可能：
-
-  * `SOAP_BACKEND_URL=http://backend-soap:8080/services/OrderService`
-
----
-
-## データベース初期化
-
-* `schema.sql` が存在する場合は起動時に自動実行されます。
-* ない場合は、以下のように手動作成してください（例）:
-
-```sql
-CREATE TABLE IF NOT EXISTS orders (
-  id SERIAL PRIMARY KEY,
-  order_id VARCHAR(64) NOT NULL,
-  amount NUMERIC(18,2) NOT NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT NOW()
-);
-CREATE UNIQUE INDEX IF NOT EXISTS uq_orders_order_id ON orders(order_id);
-```
-
-> 既存データとの衝突に注意。クリーンにする場合は `docker compose down -v`（**全データ削除**）を利用。
-
----
-
-## トラブルシューティング
-
-* **`No service was found.` / `Can't find the request ... Observer`**
-
-  * `/services/OrderService` が未公開の可能性。`backend-soap` のログで
-    `Setting the server's publish address to be /services/OrderService` を確認。
-* **`Unmarshalling Error: unexpected element ...`**
-
-  * SOAP Payload の namespace が一致していない可能性。Camel ルートで
-    `defaultOperationName=PlaceOrder` と `defaultOperationNamespace=http://example.com/order` を設定済みか確認。
-* **Gateway から 404（SOAP Backend に到達せず）**
-
-  * `SOAP_BACKEND_URL` の値、`camel-gateway` から `backend-soap` の DNS 解決（Compose ネットワーク）を確認。
-* **DB にテーブルがない / `relation "orders" does not exist`**
-
-  * `schema.sql` の配置 or 手動作成。
-  * `backend-soap` の DB 接続先が `db:5432`（コンテナ名）になっているか確認。
-* **フロントから API が飛ばない**
-
-  * ブラウザの Network タブ/Console を確認。
-  * nginx の `/api` リバプロ設定と `camel-gateway` のポート開放を確認。
-
----
-
-## 開発 Tips
-
-* ログ確認
-
-  ```bash
-  docker logs -f compose-camel-soap-rest-backend-soap-1
-  docker logs -f compose-camel-soap-rest-camel-gateway-1
-  docker logs -f compose-camel-soap-rest-web-1
-  docker logs -f compose-camel-soap-rest-broker-1
-  ```
-* 再ビルド
-
-  ```bash
-  docker compose build web camel-gateway backend-soap
-  docker compose up -d
-  ```
-* クリーン（※DB データ含む）
-
-  ```bash
-  docker compose down -v
-  ```
-
----
 
