@@ -102,6 +102,20 @@ services:
     # ここが重要：gatewayのいる backend にもつなぐ
     networks: [frontend, backend]
 
+  
+  web-soap-sb:
+    build:
+      context: ./web-soap-sb
+      dockerfile: Dockerfile
+    image: web-soap-sb:dev
+    ports:
+      - "8091:8091"
+    environment:
+      - JAVA_OPTS=
+    # depends_on:
+    #   backend-soap:
+    #     condition: service_healthy  # healthcheck がある場合
+
 
   # 任意：フロントの TLS/CORS/ルーティングを本番に寄せる場合
   # edge:

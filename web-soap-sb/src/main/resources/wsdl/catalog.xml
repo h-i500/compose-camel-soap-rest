@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<catalog xmlns="urn:oasis:names:tc:entity:xmlns:xml:catalog">
-  <!-- 例：WSDL/XSD 内で参照されている外部URL → ローカルファイルへ書き換え -->
-  <!-- 下はダミー例。あなたの WSDL 内の schemaLocation / wsdl:import の URL に合わせて追記してください -->
-  <!--
-  <uri name="http://example.com/order.xsd"
-       uri="file:///C:/work/web-soap-sb/src/main/resources/wsdl/order.xsd"/>
-  -->
-</catalog>
