@@ -104,17 +104,17 @@ services:
 
   
   web-soap-sb:
-    build:
-      context: ./web-soap-sb
-      dockerfile: Dockerfile
-    image: web-soap-sb:dev
-    ports:
-      - "8091:8091"
+    build: ./web-soap-sb
+    image: web-soap-sb:local
     environment:
-      - JAVA_OPTS=
-    # depends_on:
-    #   backend-soap:
-    #     condition: service_healthy  # healthcheck がある場合
+      - SPRING_PROFILES_ACTIVE=local
+      - SOAP_BACKEND_URL=http://backend-soap:8080/services/OrderService
+      - SERVER_PORT=8089
+    ports:
+      - "8089:8089"
+    depends_on:
+      - backend-soap
+    networks: [backend]
 
 
   # 任意：フロントの TLS/CORS/ルーティングを本番に寄せる場合
